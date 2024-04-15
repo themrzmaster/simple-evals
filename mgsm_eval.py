@@ -119,7 +119,6 @@ def get_lang_examples(lang: str) -> list[dict[str, str]]:
     # Remove any non-numeric characters for 'targets' and handle numbers correctly
     data['targets'] = data['targets'].astype(str).apply(lambda x: ''.join(filter(str.isdigit, x)))
 
-    print(data)  # Debug print to check what the data looks like after processing
 
     # Check if any processed 'targets' still contain inappropriate characters (shouldn't be the case here)
     if data['targets'].str.contains(r'\D').any():  # \D matches any non-digit character

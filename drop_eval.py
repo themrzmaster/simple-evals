@@ -11,7 +11,8 @@ import re
 import string
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import blobfile as bf
+import requests
+from io import BytesIO
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
@@ -247,68 +248,60 @@ class DropEval(Eval):
         self.test_jsonl = (
             "https://openaipublic.blob.core.windows.net/simple-evals/drop_v0_dev.jsonl.gz"
         )
-        with gzip.GzipFile(fileobj=bf.BlobFile(self.train_jsonl, "rb"), mode="rb") as f:
-            self.train_samples = list(map(json.loads, f.readlines()))
-        with gzip.GzipFile(fileobj=bf.BlobFile(self.test_jsonl, "rb"), mode="rb") as f:
-            self.test_samples = list(map(json.loads, f.readlines()))
-            if self._num_examples:
-                self.test_samples = random.Random(self.seed).sample(
-                    self.test_samples, self._num_examples
-                )
+
+        # Use requests to fetch the files and BytesIO to handle the byte stream
+        self.train_samples = self.load_samples(self.train_jsonl)
+        self.test_samples = self.load_samples(self.test_jsonl)
+
+        if self._num_examples:
+            self.test_samples = random.Random(self.seed).sample(
+                self.test_samples, self._num_examples
+            )
+
+    def load_samples(self, url):
+        """Load JSONL samples from a gzip file located at the given URL."""
+        response = requests.get(url)
+        if response.status_code == 200:
+            with gzip.GzipFile(fileobj=BytesIO(response.content), mode="rb") as f:
+                return list(map(json.loads, f.readlines()))
+        else:
+            raise ConnectionError(f"Failed to download the file: Status code {response.status_code}")
 
     def __call__(self, sampler: SamplerBase) -> EvalResult:
+        """Run the evaluation using the given sampler."""
         rng = random.Random(self.seed)
-
+        
         def fn(example: dict[str, str]):
             stuffing = rng.sample(self.train_samples, self._train_samples_per_prompt)
-
-            # prompt = """TASK: Read the provided passage, then identify the correct answer to questions below."""
-            prompt = """You will be asked to read a passage and answer a question. Some examples of passages and Q&A are provided below."""
-            prompt += "\n\n# Examples"
+            prompt = "You will be asked to read a passage and answer a question. Some examples of passages and Q&A are provided below.\n\n# Examples"
             samples = stuffing + [example]
             for i, sample in enumerate(samples):
                 is_test = i == len(stuffing)
                 prompt += "\n# Your Task\n" if is_test else ""
-                prompt += f"""
----
-{sample["context"]} """
-
+                prompt += f"\n---\n{sample['context']} "
                 a = sample["completion"]
                 correct_answers = sample["ref_text"].split("|")
-
                 if not is_test:
                     prompt += a + "\n"
                 else:
-                    prompt += """\n
-Think step by step, then write a line of the form "Answer: $ANSWER" at the end of your response.
-                    """
-                    prompt_messages = [dict(content=prompt, role="user")]
+                    prompt += "\n\nThink step by step, then write a line of the form 'Answer: $ANSWER' at the end of your response.\n"
+                    prompt_messages = [{"content": prompt, "role": "user"}]
                     response_text = sampler(prompt_messages)
-                    match = re.search(ANSWER_PATTERN, response_text)
+                    match = re.search(r"Answer: (.+)", response_text)
                     extracted_answer = match.group(1) if match else response_text
                     em_score, f1_score = drop_metric(extracted_answer, correct_answers)
-                    matches = [
-                        fuzzy_match(extracted_answer, correct_answer)
-                        for correct_answer in correct_answers
-                    ]
-                    extracted_answers = [
-                        extracted_answer for i in range(len(correct_answers)) if matches[i]
-                    ]
-                    score = True in matches
-                    html = common.jinja_env.from_string(HTML_JINJA).render(
+                    matches = [fuzzy_match(extracted_answer, correct_answer) for correct_answer in correct_answers]
+                    extracted_answers = [extracted_answer for i in range(len(correct_answers)) if matches[i]]
+                    score = any(matches)
+                    html = common.jinja_env.from_string(common.HTML_JINJA).render(
                         prompt_messages=prompt_messages,
-                        next_message=dict(content=extracted_answer, role="assistant"),
+                        next_message={"content": extracted_answer, "role": "assistant"},
                         score=score,
                         correct_answer=correct_answers,
                         extracted_answer=extracted_answers,
                     )
-                    convo = prompt_messages + [dict(content=extracted_answer, role="assistant")]
-                    return SingleEvalResult(
-                        html=html,
-                        score=score,
-                        convo=convo,
-                        metrics={"em_score": em_score, "f1_score": f1_score},
-                    )
-
+                    convo = prompt_messages + [{"content": extracted_answer, "role": "assistant"}]
+                    return SingleEvalResult(html=html, score=score, convo=convo, metrics={"em_score": em_score, "f1_score": f1_score})
+        
         results = common.map_with_progress(fn, self.test_samples)
         return common.aggregate_results(results)
