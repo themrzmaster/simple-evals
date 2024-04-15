@@ -7,7 +7,7 @@ import jinja2
 import numpy as np
 from tqdm import tqdm
 
-from .types import EvalResult, Message, SingleEvalResult
+from .custom_types import EvalResult, Message, SingleEvalResult
 
 
 def _compute_stat(values: list, stat: str):

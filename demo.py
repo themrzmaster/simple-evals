@@ -6,7 +6,6 @@ import pandas as pd
 from . import common
 from .drop_eval import DropEval
 from .gpqa_eval import GPQAEval
-from .humaneval_eval import HumanEval
 from .math_eval import MathEval
 from .mgsm_eval import MGSMEval
 from .mmlu_eval import MMLUEval
@@ -23,19 +22,17 @@ def main():
     debug = True
     samplers = {
         # chatgpt models:
-        "gpt-4-turbo-2024-04-09_assistant": ChatCompletionSampler(
-            model="gpt-4-turbo-2024-04-09",
+        "custom": ChatCompletionSampler(
+            model="custom",
+            base_url="http://0.0.0.0:8080/v1",
             system_message=OPENAI_SYSTEM_MESSAGE_API,
-        ),
-        "gpt-4-turbo-2024-04-09_chatgpt": ChatCompletionSampler(
-            model="gpt-4-turbo-2024-04-09",
-            system_message=OPENAI_SYSTEM_MESSAGE_CHATGPT,
         ),
         # claude models:
         # "claude-3-opus-20240229_empty": ClaudeCompletionSampler(
         #     model="claude-3-opus-20240229", system_message=None,
         # ),
     }
+
 
     equality_checker = ChatCompletionSampler(model="gpt-4-turbo-preview")
 
@@ -54,8 +51,6 @@ def main():
                 return MGSMEval(num_examples_per_lang=10 if debug else 250)
             case "drop":
                 return DropEval(num_examples=10 if debug else 2000, train_samples_per_prompt=3)
-            case "humaneval":
-                return HumanEval(num_examples=10 if debug else None)
             case _:
                 raise Exception(f"Unrecoginized eval type: {eval_name}")
 
