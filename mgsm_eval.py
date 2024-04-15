@@ -109,23 +109,26 @@ def score_mgsm(target: str, prediction: str) -> bool:
 
 
 
+
 def get_lang_examples(lang: str) -> list[dict[str, str]]:
     fpath = LANG_TO_FPATH[lang]
     
     # Read the data into a DataFrame
     data = pd.read_csv(fpath, sep="\t", header=None, names=["inputs", "targets"])
-    data['targets'] = data['targets'].apply(lambda x: x.replace('.', ''))
-    data['targets'] = data['targets'].apply(lambda x: x.replace(',', ''))
-    print(data)
-    # Process the DataFrame to ensure targets don't contain decimal points
-    if data['targets'].str.contains('.').any():
-        raise ValueError("Some targets contain a decimal point.")
     
+    # Remove any non-numeric characters for 'targets' and handle numbers correctly
+    data['targets'] = data['targets'].astype(str).apply(lambda x: ''.join(filter(str.isdigit, x)))
+
+    print(data)  # Debug print to check what the data looks like after processing
+
+    # Check if any processed 'targets' still contain inappropriate characters (shouldn't be the case here)
+    if data['targets'].str.contains(r'\D').any():  # \D matches any non-digit character
+        raise ValueError("Some targets contain non-numeric characters after processing.")
+
     # Create a list of dictionaries as expected by your function's signature
     examples = data.assign(lang=lang).to_dict('records')
     
     return examples
-
 
 def get_all_examples() -> list[dict[str, str]]:
     examples = []
