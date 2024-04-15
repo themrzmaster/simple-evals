@@ -117,6 +117,7 @@ def get_lang_examples(lang: str) -> list[dict[str, str]]:
     
     # Read the data into a DataFrame
     data = pd.read_csv(StringIO(response.text), sep="\t", header=None, names=["inputs", "targets"])
+    data['targets'] = data['targets'].apply(lambda x: x.replace('.', ''))
     
     # Process the DataFrame to ensure targets don't contain decimal points
     if data['targets'].str.contains('.').any():
