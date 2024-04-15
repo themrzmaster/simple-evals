@@ -10,6 +10,7 @@ from typing import Optional
 
 import requests
 import pandas as pd
+from io import StringIO
 
 from . import common
 from .mmlu_eval import HTML_JINJA
@@ -107,6 +108,7 @@ def score_mgsm(target: str, prediction: str) -> bool:
     return target == prediction
 
 
+
 def get_lang_examples(lang: str) -> list[dict[str, str]]:
     fpath = LANG_TO_FPATH[lang]
     response = requests.get(fpath)  # Get the file from URL
@@ -114,7 +116,7 @@ def get_lang_examples(lang: str) -> list[dict[str, str]]:
         raise ConnectionError(f"Failed to download the file: Status code {response.status_code}")
     
     # Read the data into a DataFrame
-    data = pd.read_csv(pd.compat.StringIO(response.text), sep="\t", header=None, names=["inputs", "targets"])
+    data = pd.read_csv(StringIO(response.text), sep="\t", header=None, names=["inputs", "targets"])
     
     # Process the DataFrame to ensure targets don't contain decimal points
     if data['targets'].str.contains('.').any():
