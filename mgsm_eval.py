@@ -111,12 +111,9 @@ def score_mgsm(target: str, prediction: str) -> bool:
 
 def get_lang_examples(lang: str) -> list[dict[str, str]]:
     fpath = LANG_TO_FPATH[lang]
-    response = requests.get(fpath)  # Get the file from URL
-    if response.status_code != 200:
-        raise ConnectionError(f"Failed to download the file: Status code {response.status_code}")
     
     # Read the data into a DataFrame
-    data = pd.read_csv(StringIO(response.text), sep="\t", header=None, names=["inputs", "targets"])
+    data = pd.read_csv(fpath, sep="\t", header=None, names=["inputs", "targets"])
     data['targets'] = data['targets'].apply(lambda x: x.replace('.', ''))
     print(data)
     # Process the DataFrame to ensure targets don't contain decimal points
