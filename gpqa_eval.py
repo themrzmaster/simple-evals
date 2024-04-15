@@ -12,7 +12,7 @@ import pandas
 
 from . import common
 from .mmlu_eval import ANSWER_PATTERN, HTML_JINJA, QUERY_TEMPLATE
-from .types import Eval, EvalResult, MessageList, SamplerBase, SingleEvalResult
+from .custom_types import Eval, EvalResult, MessageList, SamplerBase, SingleEvalResult
 
 
 def format_question(row):

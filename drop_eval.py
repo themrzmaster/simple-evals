@@ -17,7 +17,7 @@ from scipy.optimize import linear_sum_assignment
 
 from . import common
 from .mmlu_eval import HTML_JINJA
-from .types import Eval, EvalResult, SamplerBase, SingleEvalResult
+from .custom_types import Eval, EvalResult, SamplerBase, SingleEvalResult
 
 """
 From here through _normalize_answer was originally copied from:

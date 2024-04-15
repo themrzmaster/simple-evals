@@ -11,7 +11,7 @@ import blobfile as bf
 import pandas
 
 from . import common
-from .types import Eval, EvalResult, SamplerBase, SingleEvalResult
+from .custom_types import Eval, EvalResult, SamplerBase, SingleEvalResult
 
 QUERY_TEMPLATE = """
 Answer the following multiple choice question. The last line of your response should be of the following format: 'ANSWER: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.

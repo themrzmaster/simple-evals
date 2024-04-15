@@ -11,7 +11,7 @@ import blobfile as bf
 import pandas
 
 from . import common
-from .types import Eval, EvalResult, SamplerBase, SingleEvalResult
+from .custom_types import Eval, EvalResult, SamplerBase, SingleEvalResult
 
 QUERY_TEMPLATE = """
 Solve the following math problem step by step. The last line of your response should be of the form ANSWER: $ANSWER (without quotes) where $ANSWER is the answer to the problem.
