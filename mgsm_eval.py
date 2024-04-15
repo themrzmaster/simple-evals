@@ -8,7 +8,8 @@ https://arxiv.org/abs/2210.03057 reference: https://github.com/google-research/u
 import re
 from typing import Optional
 
-import blobfile as bf
+import requests
+import pandas as pd
 
 from . import common
 from .mmlu_eval import HTML_JINJA
@@ -108,14 +109,20 @@ def score_mgsm(target: str, prediction: str) -> bool:
 
 def get_lang_examples(lang: str) -> list[dict[str, str]]:
     fpath = LANG_TO_FPATH[lang]
-    examples = []
-    with bf.BlobFile(fpath, "r") as f:
-        for line in f:
-            inputs, targets = line.strip().split("\t")
-            if "." in targets:
-                raise ValueError(f"targets {targets} contains a decimal point.")
-            # targets = int(targets.replace(",", ""))
-            examples.append({"inputs": inputs, "targets": targets, "lang": lang})
+    response = requests.get(fpath)  # Get the file from URL
+    if response.status_code != 200:
+        raise ConnectionError(f"Failed to download the file: Status code {response.status_code}")
+    
+    # Read the data into a DataFrame
+    data = pd.read_csv(pd.compat.StringIO(response.text), sep="\t", header=None, names=["inputs", "targets"])
+    
+    # Process the DataFrame to ensure targets don't contain decimal points
+    if data['targets'].str.contains('.').any():
+        raise ValueError("Some targets contain a decimal point.")
+    
+    # Create a list of dictionaries as expected by your function's signature
+    examples = data.assign(lang=lang).to_dict('records')
+    
     return examples
 
 
